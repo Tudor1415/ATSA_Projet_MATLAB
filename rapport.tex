@@ -1,0 +1,659 @@
+\documentclass[a4paper, 11pt]{article}
+\usepackage[x11names, table]{xcolor}
+\usepackage{colortbl}
+\usepackage[utf8]{inputenc}
+\usepackage[french]{babel}
+\usepackage[top=3cm, bottom=3cm, left=2cm, right=2cm]{geometry}
+\usepackage{tikz}
+\usepackage{hyperref}
+\usepackage{graphicx}
+\usepackage{listings}
+
+\usepackage{caption}
+\usepackage{subcaption}
+
+\lstdefinestyle{custom}{
+    inputencoding=utf8,          % Specify UTF-8 encoding for input
+    extendedchars=true,          % Allow extended characters
+    literate=%
+      {à}{{\`a}}1
+      {é}{{\'e}}1
+      {è}{{\`e}}1
+      {ê}{{\^e}}1
+      {ç}{{\c{c}}}1
+      {ô}{{\^o}}1
+      {û}{{\^u}}1
+      {î}{{\^i}}1
+}
+
+
+\newcounter{manipulation}[section]
+\renewcommand{\themanipulation}{7.\thesection.\arabic{manipulation}}
+\newcommand{\manipulation}{%
+    \stepcounter{manipulation}%
+    \paragraph{Manipulation \themanipulation : }%
+}
+
+\newcounter{programme}[section]
+\renewcommand{\theprogramme}{7.\thesection.\arabic{programme}}
+\newcommand{\programme}{%
+    \stepcounter{programme}%
+    \paragraph{Programme \theprogramme : }%
+}
+
+\newcounter{question}[section]
+\renewcommand{\thequestion}{7.\thesection.\arabic{question}}
+\newcommand{\question}{%
+    \stepcounter{question}%
+    \paragraph{Question \thequestion : }%
+}
+
+
+\hypersetup{
+    colorlinks=true, % Liens colorés au lieu de boîtes colorées
+    linkcolor=blue, % Couleur des liens internes
+    filecolor=magenta, % Couleur des liens de fichiers
+    urlcolor=cyan, % Couleur des liens URL
+}
+
+\title{\Huge \textbf{Compte rendu de traveaux pratiques : Projet MATLAB}}
+\author{
+    \large Tudor OPRAN
+}
+\date{\today}
+\input{maths}
+
+\begin{document}
+
+\maketitle
+\tableofcontents
+\vfill
+\section{Introduction}
+Dans ce rapport, nous abordons le domaine complexe et en constante évolution du traitement audio et des effets numériques. Notre objectif est de démystifier les principes fondamentaux du traitement du signal audio, de l'analyse fréquentielle aux techniques avancées d'effets audio tels que la réverbération et le délai. À travers une combinaison de théorie et d'application pratique, ce rapport vise à fournir une compréhension approfondie de la manière dont les effets numériques peuvent être appliqués et manipulés pour améliorer la qualité sonore. L'intégralité du projet se trouve à l'adresse : \href{https://github.com/Tudor1415/ATSA_Projet_MATLAB}{Code GitHub}.
+\newpage
+
+\section{Echantillonnage}
+\noindent\begin{minipage}[t]{0.45\textwidth}
+\manipulation
+Ce programme nous fait entendre un son de fréquence $44100$ Hz sous-échantillonné à la fréquence $40000$ Hz. D'après le critère de Nyquist-Shannon, nous avons un repliement de spectre donc la fréquence du son émis devient : 
+\[
+    f_{\text{émission}} = \frac{f_{\text{échantillonnage}}}{2} - \abs{f_{\text{signal}} - \frac{f_{\text{échantillonnage}}}{2}}
+\]
+ or $f_{\text{signal}} \geq \frac{1}{2}f_{\text{échantillonnage}}$ donc $f_{\text{émission}} = \abs{f_{\text{signal}} - f_{\text{échantillonnage}}}$. On obtient alors une fréquence d'émission audible égale à $4100$ Hz.
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.45\textwidth}
+\programme
+Le programme implémentant la manipulation est le suivant : 
+\begin{lstlisting}[language=Matlab]
+fc = 40000;
+fe = 44100;
+t = [0 : 1 / fe : 5];
+x = sin(2 * pi * t * fc);
+soundsc(x, fe);
+\end{lstlisting}
+\end{minipage}
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=0.65\linewidth]{images/manip_7_2_1.jpg}
+    \label{fig:manip721}
+\end{figure}
+
+\question Le son généré par le programme peut être entendu par l'humain ca sa fréquence se situe dans le domaine des fréquences audibles $4100 \text{Hz} \; \in \interf{0}{20000} \text{Hz}$.
+
+\vspace{0.5cm} % Ajoute 0.5cm d'espace vertical
+
+\noindent\begin{minipage}[t]{0.45\textwidth}
+\manipulation 
+Pour charger le son contenu dans le fichier, il faut exécuter le programme ci-joint.
+\end{minipage}
+\hfill
+\vspace{-0.5cm} % Compense l'espace vertical précédent
+\begin{minipage}[t]{0.45\textwidth}
+\programme
+Ce programme charge le son dans Matlab et affiche la fréquence d'encodage : 
+\begin{lstlisting}[language=Matlab]
+[signal, fe] = audioread('mehldau.wav');
+fe
+\end{lstlisting}
+\end{minipage}
+
+\question En executant le programme, nous retrouvons une fréquence d'encodage de $44100$ Hz.
+
+\vspace{0.5cm} % Ajoute 0.5cm d'espace vertical
+
+\noindent\begin{minipage}[t]{0.45\textwidth}
+\manipulation 
+En executant les trois sous-échantillonages de facteurs $2$, $4$ et $8$, nous observons que dans chaque cas, puisque la fréquence du signal ($44100$ Hz) est largement supérieure à la moitié de la fréquence d'échantillonnage, le repliement se produit autour de la fréquence de Nyquist ($\frac{fe}{2}$).
+\end{minipage}
+\hfill
+\vspace{-0.5cm} % Compense l'espace vertical précédent
+\begin{minipage}[t]{0.5\textwidth}
+\programme
+Ce programme sous-échantillonne le signal original d'un facteur $2$, $4$ et $8$ : 
+\begin{lstlisting}[language=Matlab]
+[signal, fe] = audioread('mehldau.wav');
+
+% Sous-echantillonnage par un facteur de 2
+signal_sous_echantillonne2 = signal(1:2:end);
+audiowrite('signal_sous_echantillonne2.wav', signal_sous_echantillonne2, fe/2);
+
+% Sous-echantillonnage par un facteur de 4
+signal_sous_echantillonne4 = signal(1:4:end);
+audiowrite('signal_sous_echantillonne4.wav', signal_sous_echantillonne4, fe/4);
+
+% Sous-echantillonnage par un facteur de 8
+signal_sous_echantillonne8 = signal(1:8:end);
+audiowrite('signal_sous_echantillonne8.wav', signal_sous_echantillonne8, fe/8);
+\end{lstlisting}
+\end{minipage}
+
+\vspace{0.5cm}
+
+\begin{figure}[h!]
+    \centering
+    \begin{subfigure}[b]{0.45\linewidth}
+        \includegraphics[width=\linewidth]{images/Manip_7_2_3_spectre_original.jpg}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[b]{0.45\linewidth}
+        \includegraphics[width=\linewidth]{images/Manip_7_2_3_spectre_echantil_2.jpg}
+    \end{subfigure}
+    \vspace{1em} % Add some vertical space between the rows
+    \begin{subfigure}[b]{0.45\linewidth}
+        \includegraphics[width=\linewidth]{images/Manip_7_2_3_spectre_echantil_4.jpg}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[b]{0.45\linewidth}
+        \includegraphics[width=\linewidth]{images/Manip_7_2_3_spectre_echantil_8.jpg}
+    \end{subfigure}
+    \caption{Comparaison des spectres pour différents facteurs de sous-échantillonnage}
+\end{figure}
+
+\question Après execution du programme et mesure de la taille des fichiers sous-échantillonés, nous obtenons les données suivantes :
+\begin{table}[h]
+    \centering
+    \begin{tabular}{lc}
+        \hline
+        Type de fichier & Taille \\
+        \hline
+        Fichier original & 832 Ko (852 646 octets) \\
+        Sous-échantillonnage facteur 2 & 416 Ko (426 346 octets) \\
+        Sous-échantillonnage facteur 4 & 208 Ko (213 196 octets) \\
+        Sous-échantillonnage facteur 8 & 104 Ko (106 620 octets) \\
+        \hline
+    \end{tabular}
+    \caption{Tailles des fichiers après sous-échantillonnage}
+    \label{tab:taille_fichiers}
+\end{table}
+
+\question Plus le facteur de sous-échantillonnage est important, plus la qualité sonore diminue. Ceci est dû à l'effacement de certaines nuances sonores par repliement de spectre. De plus, on observe que les fichiers audio sous-échantillonnés ressemblent au fichier original entendu de loin ou à travers des murs. Ceci peut aussi témoigner d'un effet de distorsion induit par le sous-échantillonnage.
+
+\section{Analyse fréquentielle}
+
+\programme
+Ce programme charge le fichier audio, affiche sa représentation temporelle, son spectre d'amplitude en décibels, et permet de l'écouter pour analyser son contenu sonore.
+\begin{lstlisting}[language=Matlab]
+% Charger le son piano1.wav
+[y, fs] = audioread('input/piano1.wav');
+
+% Visualiser la representation temporelle
+subplot(2, 1, 1);
+t = (0:length(y) - 1) / fs;
+plot(t, y);
+xlabel('Temps (s)');
+ylabel('Amplitude');
+title('Representation temporelle');
+
+% Visualiser le spectre d'amplitude en decibels
+subplot(2, 1, 2);
+N = length(y);
+f = (-N/2:N/2-1) * fs / N;
+Y = fftshift(fft(y));
+amplitude_dB = 10 * log10(abs(Y));
+plot(f, amplitude_dB);
+xlabel('Frequence (Hz)');
+ylabel('Amplitude (dB)');
+title('Spectre d'amplitude en dB');
+xlim([-fs/2, fs/2]);
+
+% Ecouter la note du piano
+sound(y, fs);
+\end{lstlisting}
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=0.65\textwidth]{images/manip_7_3_1.jpg}
+  \label{fig:manip731}
+\end{figure}
+
+\question La représentation temporelle du signal révèle l'existence de possibles harmoniques à travers les oscillations en amplitude observés entre $0$ et $1.5$ secondes. De plus la representation temporelle permet une mesure de la durée de la note quand cette métrique est bien définie.
+
+\question La fréquence fondamentale $f_1$ du signal se défini par la fréquence du premier pic en amplitude après celui de la valeur éfficace. Nous mesurons $f_1 = 220.374$ Hz.
+
+\question On en déduit le tableau suivant :
+\begin{table}[h]
+    \centering
+    \begin{tabular}{lrrrrrrr}
+        \hline
+        Fréquence (Hz) & f\textsubscript{1} & f\textsubscript{2} & f\textsubscript{3} & f\textsubscript{4} & f\textsubscript{5} & f\textsubscript{6} & f\textsubscript{7}\\
+        \hline
+        Théoriques & 220 & 440 & 660 & 880 & 1100 & 1320 & 1540\\
+        Mesurées & 220.374 & 442.041 & 663.224 & 885.538 & 1108.34 & 1331.46 & 1556.2\\
+        Inharmonicité & 2.9406 & 8.0120 & 8.4362 & 10.8608 & 13.0764 & 14.9654 & 18.1166\\
+        \hline
+    \end{tabular}
+    \caption{Degré d'inharmonicité par fréquence}
+    \label{tab:inharmonicite}
+\end{table}
+
+\question Plus les harmoniques sont bien définis et espacés, plus le son est harmonieux. Donc le second piano est plus harmonieux que le premier même si le son est plus simple et plus raide.
+\begin{figure}[h!]
+  \centering
+  \includegraphics[width=0.65\textwidth]{images/manip_7_3_2.jpg}
+  \label{fig:manip731}
+\end{figure}
+
+\newpage
+
+\section{Effets audio-numériques}
+
+\subsection{Prédétermination : mesure de réponse impulsionnelle}
+\question En partant des définitions suivantes :
+$$
+    R_{yx} = \sum_{k \in \mathbb{Z}} y(k) X^*(k-u) 
+    \hspace{1cm}
+    y(k) = \sum_{n \in \mathbb{Z}} h(n) X(k-n)
+$$
+on obtient :
+\begin{align*}
+R_{yx}(u) &= \sum_{k \in \mathbb{Z}} \sum_{n \in \mathbb{Z}} h(n) X(k-n) X^*(k-u) \\
+&= \sum_{n \in \mathbb{Z}} \sum_{k \in \mathbb{Z}} h(n) X(k-n) X^*(k-u)   \\
+&= \sum_{n \in \mathbb{Z}} h(n) \sum_{k \in \mathbb{Z}} X(k-n) X^*(k-u)   \\
+&= \sum_{n \in \mathbb{Z}} h(n) \sum_{j \in \mathbb{Z}} X(j) X^*(j-(n+u)) && \text{changement de variable} j = k - n \\
+&= \sum_{n \in \mathbb{Z}} h(n) R_{xx}(n+u) && \text{par symétrie de } R \\
+&= (h \star R_{xx})(u) \\
+\end{align*}
+
+\question Supposons que $R_{xx}(u) \approx d(u)$, où $d(u)$ est la fonction impulsion unité. Dans ce cas, nous avons :
+
+\[ R_{yx}(u) = d(u) \star h(u) \]
+Pour estimer la réponse impulsionnelle $h(k)$, nous pouvons effectuer la transformation de Fourier inverse ($\text{FT}^{-1}$) de $R_{yx}(u)$ pour revenir au domaine temporel. Cela revient à :
+
+\[ h(k) = \text{FT}^{-1}[R_{yx}(u)] \]
+En effectuant cette opération, nous obtenons une estimation de la réponse impulsionnelle $h(k)$ de la pièce, qui inclut également la réponse de la chaîne de génération-captation.
+
+\subsection{Prédétermination : étude théorique de l’effet de retard}
+
+\question Pour le filtre décrit par l'équation (7.2), nous avons :
+
+\[ y(k) = x(k) - g \cdot y(k - \tau) \]
+Supposons que nous ayons une impulsion unité comme entrée, c'est-à-dire \( x(k) = \delta(k) \), où \( \delta(k) \) est la fonction impulsion unité. Dans ce cas, lorsque \( k = 0 \), \( x(k) = 1 \), et lorsque \( k \neq 0 \), \( x(k) = 0 \). Appliquons cette impulsion unité à l'entrée du filtre :
+
+\[ y(k) = \delta(k) - g \cdot y(k - \tau) \]
+Pour \( k = n \tau \), nous avons :
+
+
+\noindent\begin{minipage}{0.48\textwidth}
+Si $n=0$ :
+\begin{align*}
+    y(n\tau) &= \delta(0) - g \cdot y(0 - \tau) \\
+         &= 1 - g \cdot y(-\tau) \\
+         &= 1
+\end{align*}
+il n'y a pas d'entrée négative donc $y(-\tau) = 0$.
+\end{minipage}
+\hspace{0.04\textwidth}
+\vrule
+\hspace{0.065\textwidth}
+\begin{minipage}{0.48\textwidth}
+Si $n \geq 1$ :
+\begin{align*}
+    y(n\tau) &= \delta(n \tau) - g \cdot y((n-1)\tau) \\
+         &= 0 - g \cdot y((n-1)\tau) \\
+         &= - g \cdot y((n-1)\tau)
+\end{align*}
+par téléscopage, on obtient $y(n\tau) = (-g)^n$
+\end{minipage}
+\vspace{0.3cm}
+\hrule
+\vspace{0.3cm}
+
+\noindent On conclut alors que :
+\[
+    h(k) = \begin{cases}
+        (-g)^n \text{ si } k = n\tau \\
+        0 \text{ sinon }
+    \end{cases}
+\]
+
+\question Pour que le filtre soit stable, il faut que sa réponse impulsionnelle soit absolument sommable. En d'autres termes, si \( h(k) \) est la réponse impulsionnelle du filtre, alors la condition de stabilité est la suivante :
+
+\[ \sum_{n = -\infty}^{+\infty} |h(n)| < \infty \]
+Pour déterminer la condition de stabilité, nous devons calculer la somme des valeurs absolues de \( h(k) \) sur toutes les valeurs possibles de \( k \). Dans ce cas, \( k \) peut prendre toutes les valeurs entières.
+
+\[ \sum_{n = -\infty}^{\infty} |h(n)| = \sum_{k = -\infty}^{\infty} |(-g)^{k\tau}| \]
+
+\noindent La série ci-dessus converge si \( |g| < 1 \) d'après le critère spécial des séries altérnés. Si \( |g| \geq 1 \), le filtre sera instable car sa réponse impulsionnelle ne sera pas absolument sommable. Donc le filtre de la figure 7.1 est stable si et seulement si \( |g| < 1 \)
+
+\question Les vecteurs \(a\) et \(b\) pour le filtre \(h\) sont définis comme suit :
+
+\[
+a = [1, -g, 0, 0, \ldots, 0]
+\]
+
+\[
+b = [1, 0, 0, 0, \ldots, 0]
+\]
+où \(g\) est la valeur du coefficient de rétroaction du filtre.
+
+\noindent Le vecteur \(a\) représente les coefficients de la partie récursive du filtre, tandis que le vecteur \(b\) représente les coefficients de la partie non-récursive. Ici, la partie récursive de \(a\) commence avec \(a_1 = -g\) pour refléter la rétroaction négative du filtre, et les autres coefficients sont mis à zéro car il n'y a pas d'autres termes récursifs dans l'équation.
+
+\vspace{0.5cm} % Ajoute 0.5cm d'espace vertical
+
+\noindent\begin{minipage}[t]{0.45\textwidth}
+\manipulation 
+Le graphique obtenu représente la réponse impulsionnelle du filtre hh en fonction du temps discret. Il montre comment le filtre réagit à une impulsion unité d'entrée et comment la sortie évolue au fil du temps.
+\end{minipage}
+\hfill
+\vspace{-0.5cm} % Compense l'espace vertical précédent
+\begin{minipage}[t]{0.5\textwidth}
+\programme Ce programme génère la réponse impulsionnelle du filtre : 
+\begin{lstlisting}[language=Matlab]
+g = 0.9; Fe = 44100;
+tau = 0.25*Fe; N = 10*Fe;
+X = zeros(1,N); X(1) = 1;
+a = zeros(1, tau+1); a(1) = 1;
+a(tau+1) = g; b = 1;
+Y = filter(b, a, X);
+stem(Y)
+\end{lstlisting}
+\end{minipage}
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=0.65\textwidth]{images/manip_7_4_1.jpg}
+  \label{fig:manip741}
+  \caption{Réponse impulsionelle du filtre en fonction du temps}
+\end{figure}
+
+\question La réponse impulsionelle en fréquence du filtre est par définition :
+\[
+\frac{\hat{Y}}{\hat{X}} = \frac{\hat{X} - g \cdot TF[Y(k-\tau)]}{\hat{X}} = \frac{\hat{X} - g\hat{Y}e^{-2j\pi\nu\tau}}{\hat{X}} = 1 - ge^{-2j\pi\nu\tau} \frac{\hat{Y}}{\hat{X}}
+\]
+on obtient alors :
+\[
+    \hat{h}(\nu) = \frac{1}{1 + ge^{-2j\pi\nu\tau}}
+\]
+Le module et la phase sont alors respectivement :
+
+\[
+|\hat{h}(\nu)| = \frac{1}{\sqrt{1 + 2g \cos(2\pi\nu\tau) + g^2}}
+\hspace{1cm}
+\text{et}
+\hspace{1cm}
+\angle\hat{h}(\nu) = -\arctan\left(\frac{g \sin(2\pi\nu\tau)}{1 + g \cos(2\pi\nu\tau)}\right)
+\]
+
+\vspace{0.5cm} % Ajoute 0.5cm d'espace vertical
+
+\programme Ce programme affiche les mesures théoriques et experimentales.
+
+\begin{lstlisting}[language=Matlab]
+% Parametres
+g = 0.9;
+Fe = 44100;
+tau = 0.25 * Fe;
+N = 10 * Fe;
+nu = linspace(-0.5, 0.5, N); % Frequences reduites entre -0.5 et 0.5
+
+% Calcul de la reponse en frequence theorique
+h_theorique = 1 ./ (1 + g * exp(-2j * pi * nu * tau));
+
+% Calcul de la reponse impulsionnelle numerique
+X = zeros(1, N);
+X(1) = 1;
+a = zeros(1, tau + 1);
+a(1) = 1;
+a(tau + 1) = -g;
+b = 1;
+Y = filter(b, a, X);
+
+% Calcul de la DFT de la reponse impulsionnelle numerique
+h_numerique = fft(Y);
+
+% Tracage des modules
+figure;
+plot(nu, abs(h_theorique), 'b', 'LineWidth', 2, 'DisplayName', 'Theorique');
+hold on;
+plot(nu, abs(h_numerique), 'r', 'LineWidth', 2, 'DisplayName', 'Numerique');
+xlabel('Frequence reduite (\nu)');
+ylabel('Module de la reponse en frequence');
+title('Comparaison de la reponse en frequence theorique et numerique');
+legend('Location', 'Best');
+grid on;
+\end{lstlisting}
+
+\begin{figure}[ht]
+  \centering
+  \begin{subfigure}{0.48\textwidth}
+    \includegraphics[width=\linewidth]{images/manip_7_4_2a.jpg}
+    \label{fig:manip742a}
+  \end{subfigure}
+  \begin{subfigure}{0.45\textwidth}
+    \includegraphics[width=\linewidth]{images/manip_7_4_2b.jpg}
+    \label{fig:manip742b}
+  \end{subfigure}
+  \caption{Comparaison de la réponse en fréquence théorique et numérique}
+  \label{fig:manip742}
+\end{figure}
+
+\subsection{Application de l’effet de réverbération}
+
+\vspace{0.5cm} % Ajoute 0.5cm d'espace vertical
+
+\noindent\begin{minipage}[t]{0.45\textwidth}
+\manipulation 
+Le signal le plus adapté pour approximer la réponse impulsionnelle de la pièce est le lignal xe1 car il se rapproche le plus d'une impulsion de Dirac.
+\end{minipage}
+\hfill
+\vspace{-0.5cm} % Compense l'espace vertical précédent
+\begin{minipage}[t]{0.5\textwidth}
+\programme Ce programme calcule la corrélation croisée entre les deux signaux audio, xe1 et xe2, et affiche les résultats sous forme de graphiques :
+\begin{lstlisting}[language=Matlab]
+% Load the 'signal' package
+pkg load signal
+
+% Charger les donnees du fichier signal_excitation.mat
+load('input/signal_excitation.mat');
+
+% Calculer la correlation croisee entre les signaux xe1 et xe2
+correlation_xe1 = xcorr(xe1, xe1);
+correlation_xe2 = xcorr(xe2, xe2);
+
+% Afficher les resultats
+figure;
+subplot(2, 1, 1);
+plot(correlation_xe1);
+title('Correlation croisee entre xe1 et xe1');
+
+subplot(2, 1, 2);
+plot(correlation_xe2);
+title('Correlation croisee entre xe2 et xe2');
+\end{lstlisting}
+\end{minipage}
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=0.65\textwidth]{images/manip_7_4_3.jpg}
+  \label{fig:manip743}
+  \caption{Autocorrélation des deux signaux d'excitation}
+\end{figure}
+
+\vspace{0.5cm} 
+
+\programme Ce programme calcule la corrélation croisée entre les deux signaux audio, xe1 et xe2, et affiche les résultats sous forme de graphiques :
+\begin{lstlisting}[language=Matlab]
+% Charger les donnees du fichier signal_excitation.mat
+load('input/signal_excitation.mat');
+
+% Appeler la fonction simule_piece pour simuler l'effet de la piece
+xe_simule = simule_piece(xe1, 44100);
+
+% Calculer la correlation croisee entre le signal capte (xe_simule) et le signal d'excitation (xe1)
+correlation_yx = xcorr(xe_simule, xe1);
+
+% Effectuer la transformation de Fourier inverse pour obtenir la reponse impulsionnelle estimee
+h_estimee = ifft(correlation_yx);
+
+% Trace de la reponse impulsionnelle estimee en fonction du temps
+figure;
+plot(1:length(h_estimee), h_estimee);
+title('Reponse impulsionnelle estimee de la piece');
+xlabel('Temps (echantillons)');
+ylabel('Amplitude');
+\end{lstlisting}
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=0.65\textwidth]{images/manip_7_4_4.jpg}
+  \label{fig:manip743}
+  \caption{Autocorrélation des deux signaux d'excitation}
+\end{figure}
+
+\programme Ce programme calcule le produit de convolution du signal d'entré avec la réponse impulsionelle éstimée du filtre.
+\begin{lstlisting}[language=Matlab]
+function y = effet_reverb(x, h_estimee)
+    % Convolution du signal x avec la reponse impulsionnelle estimee
+    y = filter(h_estimee, 1, x);
+end
+\end{lstlisting}
+
+
+\vspace{0.5cm} % Ajoute 0.5cm d'espace vertical
+
+\manipulation 
+Temps d'exécution de la fonction effet reverb : $35.9500$ secondes
+\begin{lstlisting}[language=Matlab]
+% Charger les donnees du fichier signal_excitation.mat
+load('input/signal_excitation.mat');
+
+% Appeler la fonction simule_piece pour simuler l'effet de la piece
+xe_simule = simule_piece(xe1, 44100);
+
+% Calculer la correlation croisee entre le signal capte (xe_simule) et le signal d'excitation (xe1)
+correlation_yx = xcorr(xe_simule, xe1);
+
+% Effectuer la transformation de Fourier inverse pour obtenir la reponse impulsionnelle estimee
+h_estimee = ifft(correlation_yx);
+
+% Charger les donnees audio (fichier "nylon_guitar.wav")
+[x, Fe] = audioread('input/nylon-guitar.wav');
+
+% Mesurer le temps de calcul de la fonction effet_reverb
+tic; % Debut du chronometre
+y_reverb = effet_reverb(xe_simule, h_estimee); % Appel de la fonction
+temps_execution = toc; % Fin du chronometre
+
+% Afficher le temps de calcul
+fprintf('Temps d''execution de la fonction effet_reverb : %.4f secondes\n', temps_execution);
+\end{lstlisting}
+
+\programme Ce programme réalise un effet de réverbération sur un signal audio en utilisant le filtrage dans le domaine fréquentiel. Temps de calcul: $0.036413$ secondes.
+\begin{lstlisting}[language=Matlab]
+function y_reverb = effet_reverb_FFT(x, h_estimee)
+    N = max([length(x) length(h_estimee)]);
+    % Calcule la transformee de Fourier discrete de la reponse impulsionnelle
+    H = fft(h_estimee, N);
+
+    % Calcule la transformee de Fourier discrete du signal d'entree
+    X = fft(x, N);
+
+    % Effectue la multiplication dans le domaine frequentiel
+    Y = H .* X;
+
+    % Calcule l'inverse de la transformee de Fourier discrete pour obtenir le signal filtre
+    y_reverb = ifft(Y, N);
+end
+\end{lstlisting}
+
+\question La méthode utilisant la FFT pour effectuer la convolution est équivalente à la convolution classique de la section 7.4.3 en termes de résultat final. Les deux méthodes calculent la convolution entre un signal d'entrée et une réponse impulsionnelle pour obtenir un signal de sortie filtré.
+Cependant, la méthode basée sur la FFT peut être plus efficace en termes de temps de calcul, surtout lorsque les signaux d'entrée et de réponse impulsionnelle sont longs. Elle exploite la propriété de la transformée de Fourier qui permet de réaliser une convolution dans le domaine fréquentiel en effectuant une simple multiplication. Cela peut conduire à des gains significatifs de vitesse de calcul par rapport à la convolution classique, qui nécessite de calculer explicitement la somme des produits.
+
+\subsection{Application de l’effet de retard}
+
+\programme Ce programme implémente un effet de retard audio en appliquant un filtre de retard à un signal d'entrée. Temps de calcul: $0.621052$ secondes.
+\begin{lstlisting}[language=Matlab]
+function y_delayed = effet_delay(x, delay_time, g, Fe)
+    tau_samples = round(delay_time * Fe);
+
+    y_delayed = zeros(size(x));
+
+    % Application du filtre
+    for n = 1:length(x)
+        if n - tau_samples > 0
+            y_delayed(n) = x(n) - g * x(n - tau_samples);
+        else
+            y_delayed(n) = x(n);
+        end
+    end
+end
+\end{lstlisting}
+
+\vspace{0.5cm} % Ajoute 0.5cm d'espace vertical
+
+\programme Ce programme implémente un effet de retard avec un filtre de moyenne glissante créant ainsi un effet de délai avec réverbération. Temps de calcul avec effet delay filtre : $2.262355$ secondes.
+\begin{lstlisting}[language=Matlab]
+function y_delayed = effet_delay_filtre(x, delay_time, g, K, Fe)
+    % Calcul du nombre d'echantillons de retard
+    tau_samples = round(delay_time * Fe);
+
+    % Creation du vecteur de sortie initialise a zero
+    y_delayed = zeros(size(x));
+
+    % Appliquer le filtre de retard
+    for n = 1:length(x)
+        if n - tau_samples > 0
+            y_delayed(n) = x(n) - g/K * sum(y_delayed(n - tau_samples:min(n - 1, n - 1 + K)));
+        else
+            y_delayed(n) = x(n);
+        end
+    end
+end
+\end{lstlisting}
+
+
+\vspace{0.5cm} % Ajoute 0.5cm d'espace vertical
+
+\programme Ce programme calcule et trace numériquement la réponse en fréquence d'un filtre $h_r(k)$.
+\begin{lstlisting}[language=Matlab]
+% Parametres du filtre
+K = 10; % Longueur du filtre
+Fs = 44100; % Frequence d'echantillonnage (Hz)
+
+% Creation du filtre h_r(k)
+h_r = ones(1, K) / K;
+
+% Calcul de la reponse en frequence
+N = length(h_r); % Longueur de la reponse impulsionnelle
+f = (0:N-1) * Fs / N; % Frequences correspondantes
+
+H_r = fft(h_r, N); % Transformee de Fourier discrete de h_r(k)
+
+% Trace de la reponse en frequence
+figure;
+plot(f, abs(H_r));
+title('Reponse en frequence du filtre h_r(k)');
+xlabel('Frequence (Hz)');
+ylabel('Amplitude');
+
+\end{lstlisting}
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=0.65\textwidth]{images/manip_7_4_8.jpg}
+  \label{fig:manip748}
+\end{figure}
+
+\end{document}
